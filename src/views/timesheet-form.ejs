@@ -1,0 +1,42 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Staff entry</p>
+    <h1>Fill a weekly timesheet.</h1>
+  </div>
+</section>
+
+<form class="panel" method="post" action="/timesheets">
+  <div class="form-grid">
+    <label>
+      Staff profile
+      <select name="staffId" required>
+        <% staff.forEach((profile) => { %>
+          <option value="<%= profile.id %>" <%= selectedStaffId === profile.id ? 'selected' : '' %>><%= profile.name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>
+      Week start
+      <input type="date" name="weekStart" value="<%= weekStart %>" required>
+    </label>
+  </div>
+
+  <div class="hours-grid">
+    <% dates.forEach((date) => { %>
+      <label>
+        <span><%= date %></span>
+        <input type="number" name="hours_<%= date %>" min="0" max="24" step="0.25" value="0">
+      </label>
+    <% }) %>
+  </div>
+
+  <label>
+    Notes
+    <textarea name="notes" rows="4" placeholder="Optional internal note"></textarea>
+  </label>
+
+  <div class="actions">
+    <button class="button" type="submit">Save Timesheet</button>
+    <a class="button secondary" href="/timesheets">Cancel</a>
+  </div>
+</form>

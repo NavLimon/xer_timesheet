@@ -1,0 +1,23 @@
+{
+  "name": "xero-timesheet-prototype",
+  "version": "1.0.0",
+  "description": "Prototype Node.js/EJS app for linking Xero Payroll staff and publishing weekly timesheets.",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-ejs-layouts": "^2.5.1",
+    "express-session": "^1.18.1",
+    "method-override": "^3.0.0",
+    "xero-node": "^18.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

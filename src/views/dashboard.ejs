@@ -1,0 +1,61 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Prototype workflow</p>
+    <h1>Connect Xero staff, collect weekly hours, publish to Payroll AU.</h1>
+  </div>
+  <form method="post" action="/xero/check">
+    <button class="button secondary" type="submit">Check Xero Connection</button>
+  </form>
+</section>
+
+<section class="stats-grid">
+  <article class="stat">
+    <span>Connected profiles</span>
+    <strong><%= staff.length %></strong>
+  </article>
+  <article class="stat">
+    <span>Recent timesheets</span>
+    <strong><%= timesheets.length %></strong>
+  </article>
+  <article class="stat">
+    <span>Publish status</span>
+    <strong><%= timesheets.filter((item) => item.status === 'Published').length %></strong>
+  </article>
+</section>
+
+<section class="split">
+  <div>
+    <div class="section-heading">
+      <h2>Connected staff</h2>
+      <a href="/staff">Find staff</a>
+    </div>
+    <% if (!staff.length) { %>
+      <p class="empty">No staff profiles yet.</p>
+    <% } %>
+    <div class="list">
+      <% staff.slice(0, 5).forEach((profile) => { %>
+        <a class="row" href="/timesheets/new?staffId=<%= profile.id %>">
+          <span><%= profile.name %></span>
+          <small><%= profile.email || 'No email in Xero' %></small>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+  <div>
+    <div class="section-heading">
+      <h2>Latest timesheets</h2>
+      <a href="/timesheets/new">New timesheet</a>
+    </div>
+    <% if (!timesheets.length) { %>
+      <p class="empty">No timesheets have been saved.</p>
+    <% } %>
+    <div class="list">
+      <% timesheets.forEach((timesheet) => { %>
+        <a class="row" href="/timesheets/<%= timesheet.id %>">
+          <span><%= timesheet.staffName %></span>
+          <small><%= timesheet.weekStart %> to <%= timesheet.weekEnd %> · <%= timesheet.totalHours %> hours · <%= timesheet.status %></small>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>

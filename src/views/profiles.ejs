@@ -1,0 +1,25 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Local system</p>
+    <h1>Profiles created from connected Xero staff.</h1>
+  </div>
+  <a class="button" href="/staff">Connect staff</a>
+</section>
+
+<div class="cards">
+  <% staff.forEach((profile) => { %>
+    <article class="card">
+      <h2><%= profile.name %></h2>
+      <p><%= profile.email || 'No email in Xero' %></p>
+      <dl>
+        <dt>Xero employee ID</dt>
+        <dd><%= profile.xeroEmployeeID %></dd>
+      </dl>
+      <a class="button secondary" href="/timesheets/new?staffId=<%= profile.id %>">Fill timesheet</a>
+    </article>
+  <% }) %>
+</div>
+
+<% if (!staff.length) { %>
+  <p class="empty">No profiles yet. Connect a staff member from Xero to create the first profile.</p>
+<% } %>

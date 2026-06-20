@@ -1,0 +1,60 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Xero Payroll AU</p>
+    <h1>Connect staff to local profiles.</h1>
+  </div>
+</section>
+
+<form class="toolbar" method="get" action="/staff">
+  <input type="search" name="q" value="<%= q %>" placeholder="Search by name or email">
+  <button class="button" type="submit">Search</button>
+</form>
+
+<% if (!calendars.length || !earningsRates.length) { %>
+  <div class="notice error">Xero must have at least one payroll calendar and earnings rate before staff can be linked.</div>
+<% } %>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Email</th>
+        <th>Payroll calendar</th>
+        <th>Earnings rate</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% employees.forEach((employee) => { const linked = linkedByEmployee.get(employee.xeroEmployeeID); %>
+        <tr>
+          <td>
+            <strong><%= employee.name %></strong>
+            <% if (linked) { %><span class="pill">Connected</span><% } %>
+          </td>
+          <td><%= employee.email || '-' %></td>
+          <td colspan="3">
+            <form class="inline-form" method="post" action="/staff/link">
+              <input type="hidden" name="xeroEmployeeID" value="<%= employee.xeroEmployeeID %>">
+              <input type="hidden" name="name" value="<%= employee.name %>">
+              <input type="hidden" name="email" value="<%= employee.email %>">
+              <select name="payrollCalendarID" required>
+                <option value="">Select calendar</option>
+                <% calendars.forEach((calendar) => { %>
+                  <option value="<%= calendar.payrollCalendarID %>" <%= linked && linked.payrollCalendarID === calendar.payrollCalendarID ? 'selected' : '' %>><%= calendar.name %></option>
+                <% }) %>
+              </select>
+              <select name="earningsRateID" required>
+                <option value="">Select earnings rate</option>
+                <% earningsRates.forEach((rate) => { %>
+                  <option value="<%= rate.earningsRateID %>" <%= linked && linked.earningsRateID === rate.earningsRateID ? 'selected' : '' %>><%= rate.name %></option>
+                <% }) %>
+              </select>
+              <button class="button compact" type="submit"><%= linked ? 'Update' : 'Connect' %></button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

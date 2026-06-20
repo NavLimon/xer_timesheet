@@ -1,0 +1,43 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow"><%= timesheet.status %></p>
+    <h1><%= timesheet.staffName %> Â· <%= timesheet.weekStart %> to <%= timesheet.weekEnd %></h1>
+  </div>
+  <% if (timesheet.status !== 'Published') { %>
+    <form method="post" action="/timesheets/<%= timesheet.id %>/publish">
+      <button class="button" type="submit">Publish to Xero</button>
+    </form>
+  <% } %>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2><%= timesheet.totalHours %> total hours</h2>
+    <% if (timesheet.xeroTimesheetID) { %>
+      <span class="pill">Xero ID: <%= timesheet.xeroTimesheetID %></span>
+    <% } %>
+  </div>
+
+  <div class="table-wrap flush">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% timesheet.days.forEach((day) => { %>
+          <tr>
+            <td><%= day.date %></td>
+            <td><%= day.hours %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (timesheet.notes) { %>
+    <p class="notes"><%= timesheet.notes %></p>
+  <% } %>
+</section>

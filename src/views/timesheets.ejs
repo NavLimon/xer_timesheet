@@ -1,0 +1,36 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Weekly entry</p>
+    <h1>Timesheets ready for accounts review.</h1>
+  </div>
+  <a class="button" href="/timesheets/new">New timesheet</a>
+</section>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Staff</th>
+        <th>Week</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% timesheets.forEach((timesheet) => { %>
+        <tr>
+          <td><%= timesheet.staffName %></td>
+          <td><%= timesheet.weekStart %> to <%= timesheet.weekEnd %></td>
+          <td><%= timesheet.totalHours %> hours</td>
+          <td><span class="pill"><%= timesheet.status %></span></td>
+          <td><a href="/timesheets/<%= timesheet.id %>">Open</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<% if (!timesheets.length) { %>
+  <p class="empty">No timesheets have been saved yet.</p>
+<% } %>

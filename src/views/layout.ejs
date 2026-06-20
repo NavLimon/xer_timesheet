@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/">Xero Timesheets</a>
+      <nav>
+        <a class="<%= path === '/' ? 'active' : '' %>" href="/">Dashboard</a>
+        <a class="<%= path === '/staff' ? 'active' : '' %>" href="/staff">Connect Staff</a>
+        <a class="<%= path === '/profiles' ? 'active' : '' %>" href="/profiles">Profiles</a>
+        <a class="<%= path.startsWith('/timesheets') ? 'active' : '' %>" href="/timesheets">Timesheets</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <% if (success && success.length) { %>
+        <div class="notice success"><%= success[0] %></div>
+      <% } %>
+      <% if (error && error.length) { %>
+        <div class="notice error"><%= error[0] %></div>
+      <% } %>
+      <%- body %>
+    </main>
+  </body>
+</html>
