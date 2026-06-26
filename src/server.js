@@ -9,6 +9,12 @@ const { config } = require("./config");
 const { todayMonday, weekDates } = require("./lib/dates");
 const store = require("./services/store");
 const xero = require("./services/xero");
+const xeroSyncService = require("./services/xeroSyncService");
+const employeeMappingService = require("./services/employeeMappingService");
+const earningsMappingService = require("./services/earningsMappingService");
+const payrollValidationService = require("./services/payrollValidationService");
+const timesheetSubmissionService = require("./services/timesheetSubmissionService");
+const { earningCategories, positions } = require("./services/payrollConfig");
 
 const app = express();
 
@@ -62,7 +68,7 @@ app.get(
 app.post(
   "/xero/check",
   asyncRoute(async (req, res) => {
-    const summary = await xero.getConnectionSummary();
+    const summary = await xeroSyncService.testConnection();
     req.flash("success", `Xero connection is working. Payroll calendars found: ${summary.payrollCalendarCount}.`);
     res.redirect("/");
   })
@@ -108,8 +114,149 @@ app.post(
       payrollCalendarID: req.body.payrollCalendarID,
       earningsRateID: req.body.earningsRateID
     });
+    await store.upsertEmployeeMapping({
+      staffId: staff.id,
+      xeroEmployeeID: req.body.xeroEmployeeID,
+      payrollCalendarID: req.body.payrollCalendarID,
+      payrollStatus: "Active"
+    });
+    await store.addAuditLog({
+      action: "staff.link",
+      result: "success",
+      referenceIds: { staffId: staff.id, xeroEmployeeID: req.body.xeroEmployeeID }
+    });
     req.flash("success", `${staff.name} is connected to this system.`);
     res.redirect("/profiles");
+  })
+);
+
+app.get(
+  "/payroll/xero",
+  asyncRoute(async (req, res) => {
+    const [connection, syncStatus, xeroEmployees, calendars, earningsRates, syncLogs] = await Promise.all([
+      store.getXeroConnection(),
+      store.getSyncStatus(),
+      store.listCollection("xeroEmployees"),
+      store.listCollection("payrollCalendars"),
+      store.listCollection("earningsRates"),
+      store.listCollection("syncLogs")
+    ]);
+    res.render("payroll-xero", {
+      title: "Xero Payroll Settings",
+      connection,
+      syncStatus,
+      counts: {
+        employees: xeroEmployees.length,
+        payrollCalendars: calendars.length,
+        earningsRates: earningsRates.length
+      },
+      syncLogs: syncLogs.slice(-8).reverse()
+    });
+  })
+);
+
+app.post(
+  "/payroll/xero/test",
+  asyncRoute(async (req, res) => {
+    await xeroSyncService.testConnection();
+    req.flash("success", "Xero connection is working.");
+    res.redirect("/payroll/xero");
+  })
+);
+
+app.post(
+  "/payroll/xero/sync/:type",
+  asyncRoute(async (req, res) => {
+    const actions = {
+      employees: xeroSyncService.syncEmployees,
+      calendars: xeroSyncService.syncPayrollCalendars,
+      earnings: xeroSyncService.syncEarningsRates,
+      all: xeroSyncService.syncEverything
+    };
+    const action = actions[req.params.type];
+    if (!action) {
+      req.flash("error", "Unknown sync action.");
+      return res.redirect("/payroll/xero");
+    }
+    const result = await action();
+    const count = Array.isArray(result) ? result.reduce((sum, item) => sum + item.count, 0) : result.count;
+    req.flash("success", `Synchronisation complete. ${count} record(s) updated.`);
+    res.redirect("/payroll/xero");
+  })
+);
+
+app.get(
+  "/payroll/mappings",
+  asyncRoute(async (req, res) => {
+    const [rows, xeroEmployees, calendars] = await Promise.all([
+      employeeMappingService.listMappingRows({ search: req.query.q || "", status: req.query.status || "" }),
+      store.listCollection("xeroEmployees"),
+      store.listCollection("payrollCalendars")
+    ]);
+    res.render("payroll-mappings", {
+      title: "Employee Payroll Mapping",
+      rows,
+      xeroEmployees,
+      calendars,
+      positions,
+      q: req.query.q || "",
+      selectedStatus: req.query.status || ""
+    });
+  })
+);
+
+app.post(
+  "/payroll/mappings",
+  asyncRoute(async (req, res) => {
+    const staff = await store.findStaff(req.body.staffId);
+    if (!staff) {
+      req.flash("error", "Unknown staff profile.");
+      return res.redirect("/payroll/mappings");
+    }
+    await store.upsertStaff({
+      id: staff.id,
+      position: req.body.position || staff.position || "",
+      name: staff.name,
+      email: staff.email
+    });
+    await employeeMappingService.saveMapping({
+      staffId: staff.id,
+      xeroEmployeeID: req.body.xeroEmployeeID,
+      payrollCalendarID: req.body.payrollCalendarID,
+      payrollStatus: req.body.payrollStatus || "Active"
+    });
+    req.flash("success", "Employee payroll mapping saved.");
+    res.redirect("/payroll/mappings");
+  })
+);
+
+app.get(
+  "/payroll/settings",
+  asyncRoute(async (req, res) => {
+    const settings = await earningsMappingService.listPayrollSettings();
+    res.render("payroll-settings", {
+      title: "Payroll Settings",
+      earningCategories,
+      ...settings
+    });
+  })
+);
+
+app.post(
+  "/payroll/settings/positions/:position",
+  asyncRoute(async (req, res) => {
+    await earningsMappingService.savePositionMapping(req.params.position, req.body);
+    req.flash("success", `${req.params.position} earnings mapping saved.`);
+    res.redirect("/payroll/settings");
+  })
+);
+
+app.post(
+  "/payroll/settings/overrides/:staffId",
+  asyncRoute(async (req, res) => {
+    await earningsMappingService.saveEmployeeOverride(req.params.staffId, req.body);
+    req.flash("success", "Employee override saved.");
+    res.redirect("/payroll/settings");
   })
 );
 
@@ -187,7 +334,20 @@ app.get(
     const timesheet = await store.findTimesheet(req.params.id);
     if (!timesheet) return res.status(404).render("not-found", { title: "Not Found" });
     const staff = await store.findStaff(timesheet.staffId);
-    res.render("timesheet-detail", { title: "Timesheet", timesheet, staff });
+    const validation = await payrollValidationService.validateTimesheet(timesheet, staff);
+    res.render("timesheet-detail", { title: "Timesheet", timesheet, staff, validation });
+  })
+);
+
+app.post(
+  "/timesheets/:id/validate",
+  asyncRoute(async (req, res) => {
+    const timesheet = await store.findTimesheet(req.params.id);
+    if (!timesheet) return res.status(404).render("not-found", { title: "Not Found" });
+    const staff = await store.findStaff(timesheet.staffId);
+    const validation = await timesheetSubmissionService.validateAndLog(timesheet, staff);
+    req.flash(validation.ok ? "success" : "error", validation.ok ? "Validation passed." : "Validation failed. Review the report.");
+    res.redirect(`/timesheets/${timesheet.id}`);
   })
 );
 
@@ -202,8 +362,7 @@ app.post(
     }
 
     const staff = await store.findStaff(timesheet.staffId);
-    const result = await xero.publishTimesheet(staff, timesheet);
-    await store.markTimesheetPublished(timesheet.id, result);
+    await timesheetSubmissionService.submit(timesheet, staff);
 
     req.flash("success", "Timesheet published to Xero.");
 

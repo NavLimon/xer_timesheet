@@ -1,0 +1,139 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Payroll administration</p>
+    <h1>Xero Payroll configuration and synchronisation.</h1>
+  </div>
+</section>
+
+<section class="tabs">
+  <a class="active" href="/payroll/xero">Xero Settings</a>
+  <a href="/payroll/mappings">Employee Mapping</a>
+  <a href="/payroll/settings">Payroll Settings</a>
+</section>
+
+<section class="stats-grid">
+  <article class="stat">
+    <span>Synced employees</span>
+    <strong><%= counts.employees %></strong>
+  </article>
+  <article class="stat">
+    <span>Payroll calendars</span>
+    <strong><%= counts.payrollCalendars %></strong>
+  </article>
+  <article class="stat">
+    <span>Earnings rates</span>
+    <strong><%= counts.earningsRates %></strong>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Connection Information</h2>
+    <span class="pill <%= connection.apiStatus === 'OK' ? 'success-pill' : 'warning-pill' %>"><%= connection.status %></span>
+  </div>
+
+  <dl class="details-grid">
+    <div>
+      <dt>Connected organisation</dt>
+      <dd><%= connection.organisationName || 'Not tested' %></dd>
+    </div>
+    <div>
+      <dt>Connection status</dt>
+      <dd><%= connection.status %></dd>
+    </div>
+    <div>
+      <dt>Last synchronisation</dt>
+      <dd><%= connection.lastSyncAt || 'Never' %></dd>
+    </div>
+    <div>
+      <dt>API status</dt>
+      <dd><%= connection.apiStatus %></dd>
+    </div>
+  </dl>
+
+  <% if (connection.lastError) { %>
+    <p class="notice error"><%= connection.lastError %></p>
+  <% } %>
+
+  <div class="actions wrap">
+    <form method="post" action="/payroll/xero/test">
+      <button class="button secondary" type="submit">Test Connection</button>
+    </form>
+    <form method="post" action="/payroll/xero/sync/employees">
+      <button class="button secondary" type="submit">Sync Employees</button>
+    </form>
+    <form method="post" action="/payroll/xero/sync/calendars">
+      <button class="button secondary" type="submit">Sync Payroll Calendars</button>
+    </form>
+    <form method="post" action="/payroll/xero/sync/earnings">
+      <button class="button secondary" type="submit">Sync Earnings Rates</button>
+    </form>
+    <form method="post" action="/payroll/xero/sync/all">
+      <button class="button" type="submit">Sync Everything</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Sync Status</h2>
+  </div>
+  <div class="table-wrap flush">
+    <table>
+      <thead>
+        <tr>
+          <th>Collection</th>
+          <th>Status</th>
+          <th>Last sync</th>
+          <th>Records</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% ['employees', 'payrollCalendars', 'payItems', 'earningsRates'].forEach((key) => { const item = syncStatus[key] || {}; %>
+          <tr>
+            <td><%= key %></td>
+            <td><span class="pill <%= item.status === 'success' ? 'success-pill' : 'warning-pill' %>"><%= item.status || 'Not synced' %></span></td>
+            <td><%= item.lastSyncAt || '-' %></td>
+            <td><%= item.count || 0 %></td>
+            <td><%= item.lastError || '-' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Recent Sync Logs</h2>
+  </div>
+  <% if (!syncLogs.length) { %>
+    <p class="empty">No synchronisations have been logged yet.</p>
+  <% } else { %>
+    <div class="table-wrap flush">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Result</th>
+            <th>Count</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% syncLogs.forEach((log) => { %>
+            <tr>
+              <td><%= log.timestamp %></td>
+              <td><%= log.syncType %></td>
+              <td><span class="pill <%= log.result === 'success' ? 'success-pill' : 'warning-pill' %>"><%= log.result %></span></td>
+              <td><%= log.count %></td>
+              <td><%= log.errorMessage || '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

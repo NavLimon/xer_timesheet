@@ -58,8 +58,12 @@ function employeeName(employee) {
 async function getConnectionSummary() {
   const xero = await ensureToken();
   const calendars = await xero.payrollAUApi.getPayrollCalendars(tenantId());
+  const settings = await xero.payrollAUApi.getSettings(tenantId()).catch(() => null);
   return {
     ok: true,
+    organisationName:
+      (settings && settings.body && settings.body.settings && settings.body.settings.organisationName) ||
+      "Xero Custom Connection",
     payrollCalendarCount: calendars.body.payrollCalendars ? calendars.body.payrollCalendars.length : 0
   };
 }
@@ -77,7 +81,9 @@ async function listEmployees(searchTerm = "") {
       firstName: employee.firstName || "",
       lastName: employee.lastName || "",
       email: employee.email || "",
-      status: employee.status || ""
+      status: employee.status || "",
+      payrollCalendarID: employee.payrollCalendarID || "",
+      raw: employee
     }))
     .filter((employee) => {
       if (!normalizedSearch) return true;
@@ -94,24 +100,33 @@ async function listPayrollCalendars() {
     name: calendar.name,
     calendarType: calendar.calendarType || "",
     startDate: calendar.startDate || "",
-    paymentDate: calendar.paymentDate || ""
+    paymentDate: calendar.paymentDate || "",
+    raw: calendar
   }));
 }
 
-async function listEarningsRates() {
+async function listPayItems() {
   const xero = await ensureToken();
   const response = await xero.payrollAUApi.getPayItems(tenantId());
-  const payItems = response.body.payItems || response.body.payItem || [];
-  const payItem = Array.isArray(payItems) ? payItems[0] : payItems;
+  return response.body.payItems || response.body.payItem || [];
+}
+
+function extractEarningsRates(payItems) {
+  const payItem = (Array.isArray(payItems) ? payItems[0] : payItems) || {};
   return (payItem.earningsRates || [])
     .filter((rate) => rate.earningsRateID)
     .map((rate) => ({
       earningsRateID: rate.earningsRateID,
       name: rate.name,
       earningsType: rate.earningsType || "",
-      rateType: rate.rateType || ""
+      rateType: rate.rateType || "",
+      raw: rate
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function listEarningsRates() {
+  return extractEarningsRates(await listPayItems());
 }
 
 function normalizeStatus(status) {
@@ -145,10 +160,33 @@ async function publishTimesheet(staff, timesheet) {
   return getPayrollAUV2Api().createTimesheet(tenantId(), payload);
 }
 
+async function publishTimesheetPayload(payload) {
+  await ensureToken();
+  return getPayrollAUV2Api().createTimesheet(tenantId(), payload);
+}
+
+async function listTimesheets(filter = {}) {
+  await ensureToken();
+  const response = await getPayrollAUV2Api().getTimesheets(
+    tenantId(),
+    undefined,
+    filter.filter,
+    filter.status,
+    filter.startDate,
+    filter.endDate,
+    filter.sort
+  );
+  return response.body.timesheets || [];
+}
+
 module.exports = {
+  extractEarningsRates,
   getConnectionSummary,
   listEarningsRates,
   listEmployees,
+  listPayItems,
   listPayrollCalendars,
+  listTimesheets,
+  publishTimesheetPayload,
   publishTimesheet
 };

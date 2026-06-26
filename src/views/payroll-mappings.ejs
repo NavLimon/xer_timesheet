@@ -1,0 +1,86 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Payroll administration</p>
+    <h1>Map internal employees to Xero Payroll employees.</h1>
+  </div>
+</section>
+
+<section class="tabs">
+  <a href="/payroll/xero">Xero Settings</a>
+  <a class="active" href="/payroll/mappings">Employee Mapping</a>
+  <a href="/payroll/settings">Payroll Settings</a>
+</section>
+
+<form class="toolbar" method="get" action="/payroll/mappings">
+  <input type="search" name="q" value="<%= q %>" placeholder="Search employees">
+  <select name="status">
+    <option value="">All statuses</option>
+    <option value="ready" <%= selectedStatus === 'ready' ? 'selected' : '' %>>Ready</option>
+    <option value="missingCalendar" <%= selectedStatus === 'missingCalendar' ? 'selected' : '' %>>Missing Payroll Calendar</option>
+    <option value="missingEarnings" <%= selectedStatus === 'missingEarnings' ? 'selected' : '' %>>Missing Earnings</option>
+    <option value="notLinked" <%= selectedStatus === 'notLinked' ? 'selected' : '' %>>Not Linked</option>
+  </select>
+  <button class="button" type="submit">Filter</button>
+</form>
+
+<% if (!xeroEmployees.length || !calendars.length) { %>
+  <div class="notice error">Sync employees and payroll calendars from Xero before completing mappings.</div>
+<% } %>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Internal Employee</th>
+        <th>Mapped Xero Employee</th>
+        <th>Payroll Calendar</th>
+        <th>Position</th>
+        <th>Payroll Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.forEach((row) => { %>
+        <tr>
+          <td>
+            <strong><%= row.staff.name %></strong>
+            <small><%= row.staff.email || 'No email' %></small>
+          </td>
+          <td colspan="5">
+            <form class="inline-form mapping-form" method="post" action="/payroll/mappings">
+              <input type="hidden" name="staffId" value="<%= row.staff.id %>">
+              <select name="xeroEmployeeID" required>
+                <option value="">Select Xero employee</option>
+                <% xeroEmployees.forEach((employee) => { %>
+                  <option value="<%= employee.xeroEmployeeID %>" <%= row.mapping && row.mapping.xeroEmployeeID === employee.xeroEmployeeID ? 'selected' : '' %>><%= employee.name %></option>
+                <% }) %>
+              </select>
+              <select name="payrollCalendarID" required>
+                <option value="">Select calendar</option>
+                <% calendars.forEach((calendar) => { %>
+                  <option value="<%= calendar.payrollCalendarID %>" <%= row.mapping && row.mapping.payrollCalendarID === calendar.payrollCalendarID ? 'selected' : '' %>><%= calendar.name %></option>
+                <% }) %>
+              </select>
+              <select name="position">
+                <option value="">Select position</option>
+                <% positions.forEach((position) => { %>
+                  <option value="<%= position %>" <%= row.staff.position === position ? 'selected' : '' %>><%= position %></option>
+                <% }) %>
+              </select>
+              <select name="payrollStatus">
+                <option value="Active" <%= row.mapping && row.mapping.payrollStatus === 'Active' ? 'selected' : '' %>>Active</option>
+                <option value="Inactive" <%= row.mapping && row.mapping.payrollStatus === 'Inactive' ? 'selected' : '' %>>Inactive</option>
+              </select>
+              <span class="pill <%= row.status.ready ? 'success-pill' : 'warning-pill' %>"><%= row.status.label %></span>
+              <button class="button compact" type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<% if (!rows.length) { %>
+  <p class="empty">No employee mappings match this filter.</p>
+<% } %>

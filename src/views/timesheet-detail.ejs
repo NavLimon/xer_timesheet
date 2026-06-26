@@ -1,13 +1,22 @@
 <section class="page-title">
   <div>
-    <p class="eyebrow"><%= timesheet.status %></p>
-    <h1><%= timesheet.staffName %> Â· <%= timesheet.weekStart %> to <%= timesheet.weekEnd %></h1>
+    <p class="eyebrow"><%= timesheet.status %> | <%= validation.status %></p>
+    <h1><%= timesheet.staffName %> | <%= timesheet.weekStart %> to <%= timesheet.weekEnd %></h1>
   </div>
-  <% if (timesheet.status !== 'Published') { %>
-    <form method="post" action="/timesheets/<%= timesheet.id %>/publish">
-      <button class="button" type="submit">Publish to Xero</button>
+  <div class="actions wrap">
+    <form method="post" action="/timesheets/<%= timesheet.id %>/validate">
+      <button class="button secondary" type="submit">Validate</button>
     </form>
-  <% } %>
+    <form method="post" action="/payroll/xero/sync/employees">
+      <button class="button secondary" type="submit">Re-sync Employee</button>
+    </form>
+    <% if (timesheet.status !== 'Published' && validation.ok) { %>
+      <form method="post" action="/timesheets/<%= timesheet.id %>/publish">
+        <button class="button" type="submit">Send to Xero</button>
+      </form>
+    <% } %>
+    <a class="button secondary" href="/timesheets">Cancel</a>
+  </div>
 </section>
 
 <section class="panel">
@@ -17,6 +26,25 @@
       <span class="pill">Xero ID: <%= timesheet.xeroTimesheetID %></span>
     <% } %>
   </div>
+
+  <dl class="details-grid">
+    <div>
+      <dt>Employee</dt>
+      <dd><%= timesheet.staffName %></dd>
+    </div>
+    <div>
+      <dt>Pay Period</dt>
+      <dd><%= timesheet.weekStart %> to <%= timesheet.weekEnd %></dd>
+    </div>
+    <div>
+      <dt>Total Hours</dt>
+      <dd><%= validation.totalHours %></dd>
+    </div>
+    <div>
+      <dt>Validation Status</dt>
+      <dd><span class="pill <%= validation.ok ? 'success-pill' : 'warning-pill' %>"><%= validation.status %></span></dd>
+    </div>
+  </dl>
 
   <div class="table-wrap flush">
     <table>
@@ -40,4 +68,62 @@
   <% if (timesheet.notes) { %>
     <p class="notes"><%= timesheet.notes %></p>
   <% } %>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <div class="section-heading">
+      <h2>Validation Report</h2>
+    </div>
+    <div class="check-list">
+      <% validation.checks.forEach((check) => { %>
+        <div class="check-row <%= check.ok ? 'ok' : 'bad' %>">
+          <span><%= check.ok ? 'OK' : 'NO' %></span>
+          <div>
+            <strong><%= check.label %></strong>
+            <% if (check.details) { %><small><%= check.details %></small><% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-heading">
+      <h2>Earnings Breakdown</h2>
+    </div>
+    <% if (!validation.lines.length) { %>
+      <p class="empty">No payable earnings lines were generated.</p>
+    <% } else { %>
+      <div class="table-wrap flush">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Earnings Rate</th>
+              <th>Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% validation.lines.forEach((line) => { %>
+              <tr>
+                <td><%= line.date %></td>
+                <td><%= line.earningCategoryLabel %></td>
+                <td><%= line.earningsRateName %></td>
+                <td><%= line.numberOfUnits %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Developer Payload</h2>
+  </div>
+  <pre class="json-preview"><%= JSON.stringify(validation.payload || {}, null, 2) %></pre>
 </section>

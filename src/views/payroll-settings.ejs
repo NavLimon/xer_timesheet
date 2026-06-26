@@ -1,0 +1,84 @@
+<section class="page-title">
+  <div>
+    <p class="eyebrow">Payroll administration</p>
+    <h1>Configure position earnings and employee overrides.</h1>
+  </div>
+</section>
+
+<section class="tabs">
+  <a href="/payroll/xero">Xero Settings</a>
+  <a href="/payroll/mappings">Employee Mapping</a>
+  <a class="active" href="/payroll/settings">Payroll Settings</a>
+</section>
+
+<% if (!earningsRates.length) { %>
+  <div class="notice error">Sync earnings rates from Xero before configuring payroll mappings.</div>
+<% } %>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Position Earnings Configuration</h2>
+  </div>
+
+  <div class="accordion-list">
+    <% positions.forEach((item) => { %>
+      <details class="settings-block">
+        <summary><%= item.position %></summary>
+        <form method="post" action="/payroll/settings/positions/<%= encodeURIComponent(item.position) %>">
+          <div class="mapping-grid">
+            <% earningCategories.forEach((category) => { %>
+              <label>
+                <%= category.label %><%= category.required ? '' : ' (Optional)' %>
+                <select name="<%= category.key %>" <%= category.required ? 'required' : '' %>>
+                  <option value="">Select Xero Earnings Rate</option>
+                  <% earningsRates.forEach((rate) => { %>
+                    <option value="<%= rate.earningsRateID %>" <%= item.mapping.earningsMappings && item.mapping.earningsMappings[category.key] === rate.earningsRateID ? 'selected' : '' %>><%= rate.name %></option>
+                  <% }) %>
+                </select>
+              </label>
+            <% }) %>
+          </div>
+          <div class="actions">
+            <button class="button compact" type="submit">Save Position Mapping</button>
+          </div>
+        </form>
+      </details>
+    <% }) %>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <h2>Employee Payroll Overrides</h2>
+  </div>
+
+  <% if (!staff.length) { %>
+    <p class="empty">No connected staff profiles are available for overrides.</p>
+  <% } %>
+
+  <div class="accordion-list">
+    <% staff.forEach((profile) => { %>
+      <details class="settings-block">
+        <summary><%= profile.name %> <small><%= profile.position || 'No position selected' %></small></summary>
+        <form method="post" action="/payroll/settings/overrides/<%= profile.id %>">
+          <div class="mapping-grid">
+            <% earningCategories.forEach((category) => { %>
+              <label>
+                <%= category.label %>
+                <select name="<%= category.key %>">
+                  <option value="">Use position default</option>
+                  <% earningsRates.forEach((rate) => { %>
+                    <option value="<%= rate.earningsRateID %>" <%= profile.override.earningsMappings && profile.override.earningsMappings[category.key] === rate.earningsRateID ? 'selected' : '' %>><%= rate.name %></option>
+                  <% }) %>
+                </select>
+              </label>
+            <% }) %>
+          </div>
+          <div class="actions">
+            <button class="button compact" type="submit">Save Override</button>
+          </div>
+        </form>
+      </details>
+    <% }) %>
+  </div>
+</section>
